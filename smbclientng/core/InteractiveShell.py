@@ -12,6 +12,7 @@ from importlib import import_module
 import ntpath
 import os
 import readline
+import shlex
 import shutil
 import sys
 import traceback
@@ -93,8 +94,14 @@ class InteractiveShell(object):
         running = True
         while running:
             try:
-                user_input = input(self.__prompt()).strip().split(" ")
-                command, arguments = user_input[0].lower(), user_input[1:]
+                user_input = input(self.__prompt())
+                user_input = user_input.strip().split(" ", 1)
+                
+                command = user_input[0].lower()
+                if len(user_input) == 1:
+                    arguments = []
+                else:
+                    arguments = shlex.split(user_input[1])
                 
                 # Exit the command line
                 if command == "exit":

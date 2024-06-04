@@ -261,14 +261,16 @@ class CommandCompleter(object):
                 elif text.count(" ") >= 1:
                     command, remainder = text.split(" ", 1)
                     if command in self.commands.keys():
+
+                        # Choose SMB Share to connect to
                         if command == "use":
-                            # Choose SMB Share to connect to
                             self.matches = [
                                 command + " " + s.lower()
                                 for s in self.smbSession.list_shares().keys()
                                 if s.lower().startswith(remainder.lower())
                             ]
 
+                        # 
                         elif command in ["cd", "dir", "ls", "mkdir", "rmdir", "tree"]:
                             # Choose remote directory
                             path = ""
@@ -282,16 +284,20 @@ class CommandCompleter(object):
                             for _, entry in directory_contents:
                                 if entry.is_directory() and entry.get_longname() not in [".",".."]:
                                     if len(path) != 0:
-                                        matching_entries.append(path + ntpath.sep + entry.get_longname() + ntpath.sep)
+                                        matching_entries.append(path + '/' + entry.get_longname() + '/')
                                     else:
-                                        matching_entries.append(entry.get_longname() + ntpath.sep)
+                                        matching_entries.append(entry.get_longname() + '/')
 
-                            self.matches = [
-                                command + " " + s 
-                                for s in matching_entries
-                                if s.lower().startswith(remainder.lower())
-                            ]
+                            self.matches = []
+                            for entry in matching_entries:
+                                if entry.lower().startswith(remainder.lower()):
+                                    if " " in entry:
+                                        entry = '"' + entry + '"'
+                                        self.matches.append(command + " " + entry)
+                                    else:
+                                        self.matches.append(command + " " + entry)
 
+                        # 
                         elif command in ["bat", "cat", "get", "rm"]:
                             # Choose local files and directories
                             path = ""
@@ -306,21 +312,24 @@ class CommandCompleter(object):
                                 if entry.get_longname() not in [".",".."]:
                                     if len(path) != 0:
                                         if entry.is_directory():
-                                            matching_entries.append(path + ntpath.sep + entry.get_longname() + ntpath.sep)
+                                            matching_entries.append(path + '/' + entry.get_longname() + '/')
                                         else:
-                                            matching_entries.append(path + ntpath.sep + entry.get_longname())
+                                            matching_entries.append(path + '/' + entry.get_longname())
                                     else:
                                         if entry.is_directory():
-                                            matching_entries.append(entry.get_longname() + ntpath.sep)
+                                            matching_entries.append(entry.get_longname() + '/')
                                         else:
                                             matching_entries.append(entry.get_longname())
 
-                            self.matches = [
-                                command + " " + s 
-                                for s in matching_entries
-                                if s.lower().startswith(remainder.lower())
-                            ]
-
+                            self.matches = []
+                            for entry in matching_entries:
+                                if entry.lower().startswith(remainder.lower()):
+                                    if " " in entry:
+                                        entry = '"' + entry + '"'
+                                        self.matches.append(command + " " + entry)
+                                    else:
+                                        self.matches.append(command + " " + entry)
+                            
                         elif command in ["lcd", "lls", "put", "lmkdir", "lrm", "lrmdir"]:
                             # Choose directory
                             path = ""
