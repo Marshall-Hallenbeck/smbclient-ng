@@ -253,7 +253,7 @@ class InteractiveShell(object):
 
     def command_debug(self, arguments, command):
         try:
-            pass
+            print("[debug] arguments:", arguments)
         except Exception as e:
             traceback.print_exc()
 

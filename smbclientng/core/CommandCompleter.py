@@ -7,6 +7,7 @@
 
 import ntpath
 import os
+import shlex
 
 
 class CommandCompleter(object):
@@ -266,34 +267,50 @@ class CommandCompleter(object):
         Returns:
             str: The next completion suggestion based on the user"s input state.
         """
+        DEBUG = False
+        
+        if DEBUG:
+            print()
+            print("[debug] state:", state)
 
         if state == 0:
-            
             # No text typed yet, need the list of commands available
             if len(text) == 0:
                 self.matches = [s for s in self.commands.keys()]
 
+            # 
             elif len(text) != 0:
-                # This is for the main command
+                # No arguments yet, need to autocomplete the command
                 if text.count(" ") == 0:
                     self.matches = [s for s in self.commands.keys() if s and s.startswith(text)]
                 
-                # This is for subcommands
+                # This is for subcommands or arguments
                 elif text.count(" ") >= 1:
-                    command, remainder = text.split(" ", 1)
-                    if command in self.commands.keys():
+                    # Extract command and arguments
+                    user_input = text.strip().split(" ", 1)
+                    command = user_input[0].lower()
 
+                    arguments = []
+                    remainder = ""
+                    if len(user_input) > 1:
+                        arguments = shlex.split(user_input[1])
+                        remainder = arguments[-1]
+                    
+                    if DEBUG:
+                        print("[debug] text: '%s'" % text)
+                        print("[debug] remainder: '%s'" % remainder)
+
+                    if command in self.commands.keys():
                         # Choose SMB Share to connect to
                         if command == "use":
                             self.matches = [
-                                command + " " + s.lower()
+                                command + " " + s
                                 for s in self.smbSession.list_shares().keys()
                                 if s.lower().startswith(remainder.lower())
                             ]
 
-                        # 
+                        # Autocomplete remote directory
                         elif command in ["cd", "dir", "ls", "mkdir", "rmdir", "tree"]:
-                            # Choose remote directory
                             path = ""
                             if '\\' in remainder.strip() or '/' in remainder.strip():
                                 path = remainder.strip().replace('/', ntpath.sep)
@@ -318,9 +335,8 @@ class CommandCompleter(object):
                                     else:
                                         self.matches.append(command + " " + entry)
 
-                        # 
-                        elif command in ["bat", "cat", "get", "rm"]:
-                            # Choose local files and directories
+                        # Autocomplete remote files and directories
+                        elif command in ["bat", "cat", "debug", "get", "rm"]:
                             path = ""
                             if '\\' in remainder.strip() or '/' in remainder.strip():
                                 path = remainder.strip().replace('/', ntpath.sep)
@@ -350,9 +366,9 @@ class CommandCompleter(object):
                                         self.matches.append(command + " " + entry)
                                     else:
                                         self.matches.append(command + " " + entry)
-                            
+
+                        # Autocomplete local files and directories
                         elif command in ["lcd", "lls", "put", "lmkdir", "lrm", "lrmdir"]:
-                            # Choose directory
                             path = ""
                             if os.path.sep in remainder.strip():
                                 path = path.split(os.path.sep)[:-1]
@@ -385,6 +401,7 @@ class CommandCompleter(object):
                                 for s in self.commands[command]["subcommands"]
                                 if s.startswith(remainder)
                             ]
+
                     else:
                         # Unknown subcommand, skipping autocomplete
                         pass
@@ -393,9 +410,12 @@ class CommandCompleter(object):
             else:
                 self.matches = self.commands.keys()[:]
 
+        if DEBUG:
+            print(self.matches)
+
         try:
             return self.matches[state] + " "
-        except IndexError:
+        except IndexError as err:
             return None
 
     def print_help(self, command=None):
@@ -481,13 +501,24 @@ class CommandCompleter(object):
         """
 
         print("File attributes format:\n")
-        print("\x1b[1mdachnrst\x1b[0m")
-        print("\x1b[90m│││││││└──>\x1b[0m Temporary")
-        print("\x1b[90m││││││└───>\x1b[0m System")
-        print("\x1b[90m│││││└────>\x1b[0m Read-Only")
-        print("\x1b[90m││││└─────>\x1b[0m Normal")
-        print("\x1b[90m│││└──────>\x1b[0m Hidden")
-        print("\x1b[90m││└───────>\x1b[0m Compressed")
-        print("\x1b[90m│└────────>\x1b[0m Archived")
-        print("\x1b[90m└─────────>\x1b[0m Directory")
+        if self.config.no_colors:
+            print("dachnrst")
+            print("│││││││└──> Temporary")
+            print("││││││└───> System")
+            print("│││││└────> Read-Only")
+            print("││││└─────> Normal")
+            print("│││└──────> Hidden")
+            print("││└───────> Compressed")
+            print("│└────────> Archived")
+            print("└─────────> Directory")
+        else:
+            print("\x1b[1mdachnrst\x1b[0m")
+            print("\x1b[90m│││││││└──>\x1b[0m Temporary")
+            print("\x1b[90m││││││└───>\x1b[0m System")
+            print("\x1b[90m│││││└────>\x1b[0m Read-Only")
+            print("\x1b[90m││││└─────>\x1b[0m Normal")
+            print("\x1b[90m│││└──────>\x1b[0m Hidden")
+            print("\x1b[90m││└───────>\x1b[0m Compressed")
+            print("\x1b[90m│└────────>\x1b[0m Archived")
+            print("\x1b[90m└─────────>\x1b[0m Directory")
 
